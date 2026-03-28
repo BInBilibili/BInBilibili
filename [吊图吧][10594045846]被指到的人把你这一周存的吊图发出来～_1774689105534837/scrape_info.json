@@ -1,0 +1,17 @@
+{
+  "main_thread": 10594045846,
+  "create_time": 1774689105,
+  "update_time": 1774689105,
+  "scraper_version": "1.3.1",
+  "scrape_records": [
+    {
+      "scrape_config": {
+        "DOWNLOAD_USER_AVATAR_MODE": "none",
+        "POST_FILTER_TYPE": "all",
+        "SCRAPE_SHARE_ORIGIN": true,
+        "UPDATE_SHARE_ORIGIN": true
+      },
+      "scrape_time": 1774689105
+    }
+  ]
+}
