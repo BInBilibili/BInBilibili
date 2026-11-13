@@ -1,8 +1,13 @@
-# FPS 悬浮窗
+# FPS 悬浮窗 + 卡顿基线测试
 
-桌面右上角一块半透明小面板，实时显示**屏幕帧率**。纯 Python 标准库实现，不装任何第三方包，常驻约 2% CPU。
+两个 Windows 小工具，纯 Python 标准库实现（需 Python 3.10+）：
 
-双击 `start-fps-overlay.bat` 即可启动；退出按 `Ctrl+Alt+Q`。
+| 工具 | 作用 |
+| --- | --- |
+| `fps_overlay.pyw` | 桌面右上角悬浮面板，实时显示屏幕帧率 / 帧时间 / 1% Low |
+| `lag-bench.py` | A/B 对比：开某个软件前后，电脑到底有没有变卡 |
+
+双击 `start-fps-overlay.bat` 启动悬浮窗；退出按 `Ctrl+Alt+Q`。
 
 ![预览](preview.png)
 
@@ -48,6 +53,38 @@
 
 它**不是**显卡的渲染帧数：比如游戏渲染 300 fps 但屏幕只有 144Hz，这里显示 144。要拿显卡渲染帧数需要 ETW/PresentMon 那一类需要管理员权限的钩子。
 
+## 卡顿基线测试：lag-bench.py
+
+"开这个软件会不会让电脑卡？"——平均值看不出来，尾巴才看得出来。
+
+```bat
+python lag-bench.py --run "C:\Path\App.exe"          :: 自动启动被测软件再采样
+python lag-bench.py --run "app.exe" --args "-foo" --kill
+python lag-bench.py                                   :: 手动：基线结束后按回车，你去启动软件
+python lag-bench.py --motion --out report.md          :: 保证屏幕有动画 + 输出 Markdown 报告
+```
+
+流程：先测 20 秒基线 → 启动被测软件（预热 3 秒）→ 再测 20 秒 → 输出对比表。
+
+采集的 6 类指标：
+
+| 指标 | 抓的是什么卡顿 |
+| --- | --- |
+| 帧时间 p50/p99、长帧次数 | 画面顿挫（平均帧率看不出来的那种） |
+| 调度抖动（Sleep 1ms 的超时） | 系统忙不忙，线程还能不能按时跑 |
+| 窗口响应（给前台窗口发 WM_NULL 的往返） | "点一下多久才有反应" |
+| CPU / DPC 时间 | 占用高不高、驱动层有没有插队 |
+| 磁盘队列 / 单次 IO | 开软件时磁盘打满 = 全系统顿 |
+| 硬缺页 / 可用内存 | 内存不够在换页 |
+
+判定用的是**相对变化**，不是绝对阈值：p99 比基线涨 1.5 倍以上、抖动 p99 涨 3 倍且超过 5ms、长帧翻倍、磁盘队列翻倍等才会报"变慢"。
+
+注意：
+
+- 帧率和窗口响应需要**屏幕解锁、且在动**；锁屏时会显示"不可用"，其余指标照常。
+- 桌面复制同时只能被一个进程持有：跑 lag-bench 时请先退出 FPS 悬浮窗。
+- 单次结果别当真，重复 3 次看中位数。
+
 ## 已知限制
 
 - **独占全屏（Exclusive Full Screen）抓不到**：游戏设置里改成"无边框窗口 / 无边框全屏"即可。切换显示模式后会显示 `--` 并在 1 秒内自动重连。
@@ -83,6 +120,7 @@ python fps_overlay.pyw --selftest
 
 | 文件 | 作用 |
 | --- | --- |
-| `fps_overlay.pyw` | 主程序（双击无控制台窗口） |
-| `start-fps-overlay.bat` | 启动器，自动挑 `pythonw` 或 `python` |
+| `fps_overlay.pyw` | 悬浮窗主程序（双击无控制台窗口） |
+| `lag-bench.py` | 卡顿 A/B 基线测试脚本 |
+| `start-fps-overlay.bat` | 悬浮窗启动器，自动挑 `pythonw` 或 `python` |
 | `preview.png` | 面板预览图 |
